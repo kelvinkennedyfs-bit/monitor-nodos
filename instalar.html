@@ -1,357 +1,552 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Monitor Nodos — Instalar</title>
-  <style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Monitor Nodos — Instalar</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-    body {
-      background: #0a0e1a;
-      color: #c8d8f0;
-      font-family: 'Segoe UI', system-ui, sans-serif;
-      min-height: 100vh;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      overflow: hidden;
-    }
+  body {
+    background: #060a14;
+    color: #c8d8f0;
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+    position: relative;
+  }
 
-    /* === FUNDO ANIMADO === */
-    .bg-grid {
-      position: fixed; inset: 0; z-index: 0;
-      background-image:
-        linear-gradient(rgba(0,212,255,0.04) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(0,212,255,0.04) 1px, transparent 1px);
-      background-size: 40px 40px;
-      animation: gridMove 20s linear infinite;
-    }
-    @keyframes gridMove {
-      from { background-position: 0 0; }
-      to   { background-position: 40px 40px; }
-    }
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(0,212,255,0.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,212,255,0.04) 1px, transparent 1px);
+    background-size: 50px 50px;
+    pointer-events: none;
+    z-index: 0;
+  }
 
-    .bg-glow {
-      position: fixed; inset: 0; z-index: 0; pointer-events: none;
-      background: radial-gradient(ellipse 70% 50% at 50% 50%, rgba(0,212,255,0.06) 0%, transparent 70%);
-      animation: bgPulse 4s ease-in-out infinite;
-    }
-    @keyframes bgPulse {
-      0%,100% { opacity: 0.6; }
-      50%      { opacity: 1; }
-    }
+  .orb {
+    position: fixed;
+    border-radius: 50%;
+    filter: blur(80px);
+    pointer-events: none;
+    z-index: 0;
+  }
+  .orb1 { width:500px; height:500px; background:rgba(0,212,255,0.07); top:-150px; left:-150px; animation:orbFloat1 8s ease-in-out infinite; }
+  .orb2 { width:400px; height:400px; background:rgba(123,97,255,0.07); bottom:-100px; right:-100px; animation:orbFloat2 10s ease-in-out infinite; }
+  .orb3 { width:300px; height:300px; background:rgba(0,255,136,0.05); top:50%; left:50%; transform:translate(-50%,-50%); animation:orbFloat1 12s ease-in-out infinite; }
 
-    /* === CARD PRINCIPAL === */
-    .card {
-      position: relative; 
-      background: rgba(13,21,37,0.92);
-      border: 1px solid rgba(0,212,255,0.3);
-      border-radius: 20px;
-      padding: 48px 52px;
-      max-width: 620px;
-      width: 92vw;
-      text-align: center;
-      backdrop-filter: blur(12px);
-      animation: cardGlow 3s ease-in-out infinite;
-      overflow: hidden;
-    }
-    @keyframes cardGlow {
-      0%,100% { box-shadow: 0 0 20px rgba(0,212,255,0.2), 0 0 60px rgba(0,212,255,0.06); }
-      50%      { box-shadow: 0 0 40px rgba(0,212,255,0.45), 0 0 100px rgba(0,212,255,0.15); }
-    }
+  @keyframes orbFloat1 { 0%,100%{transform:translate(0,0)} 50%{transform:translate(30px,-30px)} }
+  @keyframes orbFloat2 { 0%,100%{transform:translate(0,0)} 50%{transform:translate(-30px,30px)} }
 
-    /* scan line dentro do card */
-    .scan-line {
-      position: absolute; left: 0; right: 0; height: 2px; top: -2px;
-      background: linear-gradient(90deg, transparent, #00d4ff, #ffffff88, #00d4ff, transparent);
-      animation: scanDown 4s linear infinite;
-      pointer-events: none;
-    }
-    @keyframes scanDown {
-      0%   { top: -2px; opacity: 0; }
-      5%   { opacity: 1; }
-      95%  { opacity: 1; }
-      100% { top: 100%; opacity: 0; }
-    }
+  .container {
+    position: relative;
+    
+    max-width: 860px;
+    margin: 0 auto;
+    padding: 60px 24px 80px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 40px;
+  }
 
-    /* === ÍCONE / BADGE === */
-    .icon-wrap {
-      font-size: 52px;
-      margin-bottom: 18px;
-      display: inline-block;
-      filter: drop-shadow(0 0 16px rgba(0,212,255,0.6));
-      animation: iconFloat 3s ease-in-out infinite;
-    }
-    @keyframes iconFloat {
-      0%,100% { transform: translateY(0); }
-      50%      { transform: translateY(-6px); }
-    }
+  /* HEADER */
+  .header { text-align: center; }
 
-    /* === TÍTULO === */
-    .title {
-      font-size: 28px;
-      font-weight: 800;
-      letter-spacing: 2px;
-      text-transform: uppercase;
-      background: linear-gradient(90deg, #00d4ff, #ffffff, #00d4ff, #7b61ff, #00d4ff);
-      background-size: 200% auto;
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      animation: shimmer 3s linear infinite;
-      margin-bottom: 6px;
-    }
-    @keyframes shimmer {
-      from { background-position: 0% center; }
-      to   { background-position: 200% center; }
-    }
+  .badge-top {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(0,212,255,0.1);
+    border: 1px solid rgba(0,212,255,0.3);
+    border-radius: 20px;
+    padding: 5px 14px;
+    font-size: 11px;
+    font-weight: 600;
+    color: #00d4ff;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    margin-bottom: 20px;
+  }
 
-    .subtitle {
-      font-size: 13px;
-      color: #4a6a90;
-      letter-spacing: 1px;
-      margin-bottom: 32px;
-      text-transform: uppercase;
-    }
+  h1 {
+    font-size: clamp(30px, 6vw, 56px);
+    font-weight: 900;
+    line-height: 1.1;
+    letter-spacing: -1px;
+    background: linear-gradient(135deg, #00d4ff 0%, #ffffff 40%, #00d4ff 60%, #7b61ff 100%);
+    background-size: 200% auto;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    animation: shimmer 4s linear infinite;
+    margin-bottom: 14px;
+  }
 
-    /* === INSTRUÇÕES === */
-    .steps {
-      text-align: left;
-      margin-bottom: 36px;
-    }
-    .step {
-      display: flex;
-      align-items: flex-start;
-      gap: 14px;
-      margin-bottom: 16px;
-    }
-    .step-num {
-      width: 28px; height: 28px; flex-shrink: 0;
-      background: rgba(0,212,255,0.12);
-      border: 1px solid rgba(0,212,255,0.4);
-      border-radius: 50%;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 12px; font-weight: 700; color: #00d4ff;
-    }
-    .step-text {
-      font-size: 14px; color: #8aabcf; line-height: 1.6; padding-top: 3px;
-    }
-    .step-text strong { color: #c8d8f0; }
-    .step-text em { color: #00d4ff; font-style: normal; font-weight: 600; }
+  @keyframes shimmer {
+    0%   { background-position: 0% center; }
+    100% { background-position: 200% center; }
+  }
 
-    /* === DIVISOR === */
-    .divider {
-      border: none;
-      border-top: 1px solid rgba(0,212,255,0.12);
-      margin: 28px 0;
-    }
+  .subtitle {
+    font-size: 15px;
+    color: #506070;
+    max-width: 520px;
+    line-height: 1.6;
+    margin: 0 auto;
+  }
 
-    /* === ÁREA DO BOTÃO === */
-    .drag-label {
-      font-size: 12px;
-      color: #4a6a90;
-      text-transform: uppercase;
-      letter-spacing: 1px;
-      margin-bottom: 16px;
-    }
+  /* CARD */
+  .card {
+    background: rgba(13,21,37,0.85);
+    border: 1px solid rgba(0,212,255,0.2);
+    border-radius: 20px;
+    padding: 36px 36px 32px;
+    width: 100%;
+    position: relative;
+    overflow: hidden;
+    backdrop-filter: blur(12px);
+    animation: cardGlow 4s ease-in-out infinite;
+  }
 
-    .drag-area {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 20px;
-      margin-bottom: 12px;
-    }
+  @keyframes cardGlow {
+    0%,100% { box-shadow: 0 0 30px rgba(0,212,255,0.08), 0 20px 60px rgba(0,0,0,0.5); }
+    50%      { box-shadow: 0 0 60px rgba(0,212,255,0.18), 0 20px 60px rgba(0,0,0,0.5); }
+  }
 
-    .drag-arrow {
-      font-size: 22px;
-      color: #00d4ff;
-      animation: arrowBounce 1.2s ease-in-out infinite;
-    }
-    @keyframes arrowBounce {
-      0%,100% { transform: translateX(0); opacity: 0.5; }
-      50%      { transform: translateX(6px); opacity: 1; }
-    }
-    .drag-arrow.left { animation-direction: reverse; }
+  .card::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 20px;
+    background: linear-gradient(135deg, rgba(0,212,255,0.04) 0%, transparent 60%);
+    pointer-events: none;
+  }
 
-    /* === BOTÃO BOOKMARKLET (arrastável) === */
-    .bookmark-btn {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      padding: 12px 28px;
-      background: linear-gradient(135deg, #1565c0, #1e88e5, #0d47a1);
-      color: #ffffff;
-      font-size: 15px;
-      font-weight: 700;
-      border-radius: 10px;
-      text-decoration: none;
-      cursor: grab;
-      border: 1px solid rgba(100,180,255,0.5);
-      box-shadow:
-        0 4px 20px rgba(21,101,192,0.5),
-        0 0 30px rgba(30,136,229,0.3),
-        inset 0 1px 0 rgba(255,255,255,0.15);
-      transition: all 0.2s;
-      user-select: none;
-      position: relative;
-      overflow: hidden;
-    }
-    .bookmark-btn::after {
-      content: '';
-      position: absolute;
-      top: -50%; left: -60%;
-      width: 40%; height: 200%;
-      background: rgba(255,255,255,0.15);
-      transform: skewX(-20deg);
-      animation: btnShine 3s ease-in-out infinite;
-    }
-    @keyframes btnShine {
-      0%,70%,100% { left: -60%; opacity: 0; }
-      40%          { left: 120%; opacity: 1; }
-    }
-    .bookmark-btn:hover {
-      transform: translateY(-2px);
-      box-shadow:
-        0 8px 30px rgba(21,101,192,0.7),
-        0 0 50px rgba(30,136,229,0.4);
-    }
-    .bookmark-btn:active { cursor: grabbing; transform: scale(0.97); }
+  .card-scan {
+    position: absolute;
+    left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, #00d4ff88, rgba(255,255,255,0.4), #00d4ff88, transparent);
+    animation: scanDown 5s linear infinite;
+    pointer-events: none;
+    z-index: 2;
+  }
 
-    .hint {
-      font-size: 11px;
-      color: #334a66;
-      margin-top: 10px;
-    }
+  @keyframes scanDown {
+    0%   { top: -2px; opacity: 0; }
+    5%   { opacity: 1; }
+    95%  { opacity: 1; }
+    100% { top: 100%; opacity: 0; }
+  }
 
-    /* === FEATURES === */
-    .features {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 10px;
-      margin-top: 28px;
-      text-align: left;
-    }
-    .feature {
-      background: rgba(0,212,255,0.04);
-      border: 1px solid rgba(0,212,255,0.1);
-      border-radius: 10px;
-      padding: 10px 13px;
-      font-size: 12px;
-      color: #6080a0;
-      display: flex;
-      align-items: flex-start;
-      gap: 8px;
-    }
-    .feature .fi { flex-shrink: 0; font-size: 14px; }
-    .feature strong { color: #8aabcf; display: block; margin-bottom: 2px; font-size: 12px; }
+  .card-title {
+    font-size: 12px;
+    font-weight: 700;
+    color: #00d4ff;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    margin-bottom: 24px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
 
-    /* === VERSÃO === */
-    .version-badge {
-      display: inline-block;
-      margin-top: 28px;
-      background: rgba(123,97,255,0.1);
-      border: 1px solid rgba(123,97,255,0.3);
-      border-radius: 20px;
-      padding: 4px 14px;
-      font-size: 11px;
-      color: #7b61ff;
-      letter-spacing: 1px;
-    }
-  </style>
+  .card-title::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: linear-gradient(90deg, rgba(0,212,255,0.3), transparent);
+  }
+
+  /* INSTALL AREA */
+  .install-area {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+    padding: 28px;
+    background: rgba(0,212,255,0.03);
+    border: 1px dashed rgba(0,212,255,0.22);
+    border-radius: 14px;
+    margin-bottom: 28px;
+  }
+
+  .install-label {
+    font-size: 13px;
+    color: #4a6880;
+    text-align: center;
+    line-height: 1.6;
+  }
+
+  .install-label strong { color: #00d4ff; }
+
+  .arrow-bounce {
+    font-size: 20px;
+    animation: bounce 1.5s ease-in-out infinite;
+  }
+
+  @keyframes bounce {
+    0%,100% { transform: translateY(0); }
+    50%      { transform: translateY(6px); }
+  }
+
+  /* BOTÃO AZUL */
+  #btn-monitor {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 15px 30px;
+    border-radius: 12px;
+    font-size: 15px;
+    font-weight: 700;
+    color: #ffffff;
+    background: linear-gradient(135deg, #0055cc, #0088ff, #00c8ff);
+    border: none;
+    cursor: grab;
+    text-decoration: none;
+    position: relative;
+    overflow: hidden;
+    transition: transform 0.2s, box-shadow 0.2s;
+    box-shadow:
+      0 0 24px rgba(0,180,255,0.5),
+      0 6px 24px rgba(0,0,0,0.4),
+      inset 0 1px 0 rgba(255,255,255,0.2);
+    animation: btnGlow 3s ease-in-out infinite;
+    user-select: none;
+  }
+
+  #btn-monitor::before {
+    content: '';
+    position: absolute;
+    top: -50%; left: -60%;
+    width: 40%; height: 200%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.35), transparent);
+    transform: skewX(-15deg);
+    animation: btnShine 3s ease-in-out infinite 0.8s;
+  }
+
+  @keyframes btnShine {
+    0%,100% { left:-60%; opacity:0; }
+    20%     { opacity:1; }
+    60%     { left:120%; opacity:0; }
+  }
+
+  @keyframes btnGlow {
+    0%,100% { box-shadow: 0 0 24px rgba(0,180,255,0.5), 0 6px 24px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.2); }
+    50%      { box-shadow: 0 0 48px rgba(0,212,255,0.85), 0 6px 30px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.2); }
+  }
+
+  #btn-monitor:hover { transform: translateY(-3px) scale(1.04); }
+  #btn-monitor:active { cursor: grabbing; transform: scale(0.97); }
+
+  .drag-hint {
+    font-size: 11px;
+    color: #3a5570;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+
+  /* STEPS */
+  .steps { display: flex; flex-direction: column; gap: 14px; }
+
+  .step {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .step-num {
+    width: 26px; height: 26px; min-width: 26px;
+    border-radius: 50%;
+    background: rgba(0,212,255,0.1);
+    border: 1px solid rgba(0,212,255,0.3);
+    color: #00d4ff;
+    font-size: 12px; font-weight: 700;
+    display: flex; align-items: center; justify-content: center;
+    margin-top: 2px;
+  }
+
+  .step-text {
+    font-size: 13px;
+    color: #7a98b8;
+    line-height: 1.6;
+  }
+
+  .step-text strong { color: #c8d8f0; }
+  .step-text code {
+    background: rgba(0,212,255,0.1);
+    border: 1px solid rgba(0,212,255,0.2);
+    border-radius: 4px;
+    padding: 1px 6px;
+    font-size: 12px;
+    color: #00d4ff;
+    font-family: monospace;
+  }
+
+  /* FEATURES */
+  .features-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 12px;
+    width: 100%;
+  }
+
+  .feat {
+    background: rgba(13,21,37,0.7);
+    border: 1px solid rgba(0,212,255,0.1);
+    border-radius: 12px;
+    padding: 16px 18px;
+    transition: border-color 0.2s, background 0.2s;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .feat::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, rgba(0,212,255,0.3), transparent);
+  }
+
+  .feat:hover {
+    border-color: rgba(0,212,255,0.3);
+    background: rgba(0,212,255,0.05);
+  }
+
+  .feat-icon  { font-size: 20px; margin-bottom: 8px; }
+  .feat-title { font-size: 13px; font-weight: 700; color: #c8d8f0; margin-bottom: 4px; }
+  .feat-desc  { font-size: 12px; color: #4a6880; line-height: 1.5; }
+
+  /* FACILITIES */
+  .fac-wrap {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: center;
+    width: 100%;
+  }
+
+  .fac {
+    background: rgba(0,212,255,0.07);
+    border: 1px solid rgba(0,212,255,0.18);
+    border-radius: 8px;
+    padding: 4px 12px;
+    font-size: 12px;
+    font-weight: 600;
+    color: #00d4ff;
+    letter-spacing: 0.5px;
+    transition: all 0.2s;
+  }
+
+  .fac:hover {
+    background: rgba(0,212,255,0.16);
+    box-shadow: 0 0 10px rgba(0,212,255,0.3);
+  }
+
+  /* STATUS LEGEND */
+  .status-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    justify-content: center;
+  }
+
+  .sl-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: #6080a0;
+  }
+
+  .sl-dot {
+    width: 10px; height: 10px;
+    border-radius: 50%;
+  }
+
+  /* FOOTER */
+  .footer {
+    text-align: center;
+    font-size: 12px;
+    color: #2a3a50;
+  }
+
+  .footer a { color: rgba(0,212,255,0.5); text-decoration: none; }
+  .footer a:hover { color: #00d4ff; }
+
+  /* DIVIDER */
+  .divider {
+    width: 100%;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(0,212,255,0.15), transparent);
+    margin: 4px 0;
+  }
+</style>
 </head>
 <body>
 
-  <div class="bg-grid"></div>
-  <div class="bg-glow"></div>
+<div class="orb orb1"></div>
+<div class="orb orb2"></div>
+<div class="orb orb3"></div>
 
+<div class="container">
+
+  <!-- HEADER -->
+  <div class="header">
+    <div class="badge-top">🛰️ &nbsp;Operação Last Mile</div>
+    <h1>Monitor Nodos</h1>
+    <p class="subtitle">
+      Acompanhe em tempo real todos os nodos, motoristas, escalas e fechamentos — tudo 
+      na palma da mão, direto na barra de favoritos.
+    </p>
+  </div>
+
+  <!-- CARD INSTALAR -->
   <div class="card">
-    <div class="scan-line"></div>
+    <div class="card-scan"></div>
+    <div class="card-title">⚡ Instalação rápida</div>
 
-    <div class="icon-wrap">🛰️</div>
-    <div class="title">Monitor Nodos</div>
-    <div class="subtitle">Last Mile · Travel Management · Rostering</div>
+    <div class="install-area">
+      <div class="install-label">
+        <strong>Arraste o botão abaixo</strong> para a sua barra de favoritos do navegador.<br/>
+        Depois é só clicar nele em qualquer página do <strong>envios.adminml.com</strong>
+      </div>
+      <div class="arrow-bounce">⬇️</div>
 
-    <!-- INSTRUÇÕES -->
+      <!-- =============================================
+           BOTÃO — substitua COLE_O_BOOKMARKLET_AQUI
+           pelo conteúdo minificado do monitor-nodos.js
+           ============================================= -->
+      <a id="btn-monitor" href="COLE_O_BOOKMARKLET_AQUI">
+        🛰️ &nbsp;Monitor Nodos
+      </a>
+
+      <div class="drag-hint">☝️ Segure e arraste até a barra de favoritos</div>
+    </div>
+
+    <div class="card-title">📋 Como instalar</div>
     <div class="steps">
       <div class="step">
         <div class="step-num">1</div>
         <div class="step-text">
-          Certifique-se de que a <strong>barra de favoritos está visível</strong> no seu navegador.<br>
-          <em>Ctrl + Shift + B</em> para mostrar/ocultar.
+          <strong>Mostre a barra de favoritos</strong> no seu navegador.<br/>
+          Edge/Chrome: <code>Ctrl + Shift + B</code>
         </div>
       </div>
       <div class="step">
         <div class="step-num">2</div>
         <div class="step-text">
-          <strong>Arraste o botão azul</strong> abaixo direto para a barra de favoritos.
+          <strong>Arraste o botão azul</strong> acima até a barra de favoritos.
+          Vai aparecer como um favorito normal.
         </div>
       </div>
       <div class="step">
         <div class="step-num">3</div>
         <div class="step-text">
-          Acesse qualquer página do <em>envios.adminml.com</em> e clique no favorito para abrir o monitor.
+          Acesse qualquer página do <code>envios.adminml.com</code> e
+          <strong>clique no favorito</strong> para abrir o monitor.
         </div>
       </div>
       <div class="step">
         <div class="step-num">4</div>
         <div class="step-text">
-          Clique novamente para <strong>fechar</strong>. O painel atualiza automaticamente a cada <em>60 segundos</em>.
+          Clique novamente para <strong>fechar</strong> o painel. Os dados atualizam
+          automaticamente a cada <code>60s</code>.
         </div>
       </div>
     </div>
+  </div>
 
-    <hr class="divider"/>
-
-    <!-- BOTÃO PARA ARRASTAR -->
-    <div class="drag-label">⬇ Arraste este botão para a barra de favoritos ⬇</div>
-    <div class="drag-area">
-      <span class="drag-arrow left">←</span>
-
-      <!--
-        =====================================================
-        ATENÇÃO: substitua o href abaixo pelo conteúdo real
-        do monitor-nodos.js minificado, precedido de
-        "javascript:" — ou use jsDelivr/CDN:
-
-        javascript:(function(){var s=document.createElement('script');
-        s.src='https://cdn.jsdelivr.net/gh/SEU_USUARIO/monitor-nodos/monitor-nodos.js?t='+Date.now();
-        document.head.appendChild(s);})();
-        =====================================================
-      -->
-      <a class="bookmark-btn"
-         href="javascript:(function(){var s=document.createElement('script');s.src='https://cdn.jsdelivr.net/gh/SEU_USUARIO/SEU_REPO/monitor-nodos.js?t='+Date.now();document.head.appendChild(s);})();"
-         title="Arraste para a barra de favoritos">
-        🛰️ Monitor Nodos
-      </a>
-
-      <span class="drag-arrow">→</span>
+  <!-- FEATURES -->
+  <div class="card">
+    <div class="card-scan"></div>
+    <div class="card-title">🚀 O que o monitor faz</div>
+    <div class="features-grid">
+      <div class="feat">
+        <div class="feat-icon">🛰️</div>
+        <div class="feat-title">Aba Nodos</div>
+        <div class="feat-desc">Tabela com todos os drivers por facility, placa, ETA, ciclo e status em tempo real.</div>
+      </div>
+      <div class="feat">
+        <div class="feat-icon">📋</div>
+        <div class="feat-title">Escala por Horário</div>
+        <div class="feat-desc">Drivers agrupados por ETA em ordem alfabética numerada. Copie a lista de cada horário com 1 clique.</div>
+      </div>
+      <div class="feat">
+        <div class="feat-icon">📦</div>
+        <div class="feat-title">Fechamento de Saca</div>
+        <div class="feat-desc">KPIs de rotas, subiram, atrasados e recusas. Report pronto para colar no WhatsApp.</div>
+      </div>
+      <div class="feat">
+        <div class="feat-icon">⚠️</div>
+        <div class="feat-title">Alertas de Atraso</div>
+        <div class="feat-desc">Driver que passou o ETA + 1h sem subir a rota aparece com alerta vermelho pulsante.</div>
+      </div>
+      <div class="feat">
+        <div class="feat-icon">🦘</div>
+        <div class="feat-title">Flag Kangu</div>
+        <div class="feat-desc">Marque rotas repassadas à Kangu para controle interno no acompanhamento do dia.</div>
+      </div>
+      <div class="feat">
+        <div class="feat-icon">📲</div>
+        <div class="feat-title">Textos WhatsApp</div>
+        <div class="feat-desc">Mensagem de driver cancelado, lista por facility/horário, alerta Kangu e report de fechamento.</div>
+      </div>
     </div>
-    <div class="hint">Não clique — <strong>arraste</strong> para a barra de favoritos do navegador</div>
+  </div>
 
-    <!-- FEATURES -->
-    <div class="features">
-      <div class="feature">
-        <span class="fi">🏭</span>
-        <div><strong>16 Facilities</strong>SRJ3, ERJ2, ERJ5 e 13 nodos BRN/BRN</div>
-      </div>
-      <div class="feature">
-        <span class="fi">⚠️</span>
-        <div><strong>Alertas de Atraso</strong>Alerta visual quando ETA+1h passa sem subir rota</div>
-      </div>
-      <div class="feature">
-        <span class="fi">📋</span>
-        <div><strong>Escala por Horário</strong>Cópia pronta por grupo de ETA para WhatsApp</div>
-      </div>
-      <div class="feature">
-        <span class="fi">📦</span>
-        <div><strong>Fechamento de Saca</strong>KPIs e report completo por facility</div>
-      </div>
-      <div class="feature">
-        <span class="fi">🦘</span>
-        <div><strong>Controle Kangu</strong>Marque rotas repassadas para a Kangu</div>
-      </div>
-      <div class="feature">
-        <span class="fi">🔄</span>
-        <div><strong>Auto-refresh 60s</strong>Dados sempre atualizados em tempo real</div>
-      </div>
+  <!-- STATUS -->
+  <div class="card">
+    <div class="card-scan"></div>
+    <div class="card-title">🚦 Legenda de status</div>
+    <div class="status-legend">
+      <div class="sl-item"><div class="sl-dot" style="background:#ffcc00"></div> Definido — sem aceite</div>
+      <div class="sl-item"><div class="sl-dot" style="background:#00b4ff"></div> Aceito — não subiu</div>
+      <div class="sl-item"><div class="sl-dot" style="background:#00ff88"></div> Subiu — rota iniciada</div>
+      <div class="sl-item"><div class="sl-dot" style="background:#ff3366"></div> Recusou</div>
+      <div class="sl-item"><div class="sl-dot" style="background:#556070"></div> Cancelado</div>
+      <div class="sl-item"><div class="sl-dot" style="background:#ff6600;animation:pulse 1s infinite"></div> ⚠️ Atrasado (ETA+1h)</div>
+      <div class="sl-item"><div class="sl-dot" style="background:#7b61ff"></div> 🦘 Kangu</div>
+    </div>
+  </div>
+
+  <!-- FACILITIES -->
+  <div class="card">
+    <div class="card-scan"></div>
+    <div class="card-title">🏭 Nodos monitorados</div>
+    <div class="fac-wrap">
+      <div class="fac">SRJ3</div>
+      <div class="fac">ERJ2</div>
+      <div class="fac">ERJ5</div>
+      <div class="fac">BRNRJ381</div>
+      <div class="fac">BRNRJ82</div>
+      <div class="fac">BRNRJ719</div>
+      <div class="fac">BRNRJ153</div>
+      <div class="fac">BRNRJ542</div>
+      <div class="fac">BRNRJ564</div>
+      <div class="fac">BRNRJ906</div>
+      <div class="fac">BRNRJ1510</div>
+      <div class="fac">BRNRJ1924</div>
+      <div class="fac">BRNRJ12663</div>
+      <div class="fac">BRNSP1335</div>
+      <div class="fac">BRNRJ122</div>
+      <div class="fac">BRNRJ12898</div>
+    </div>
+  </div>
+
+  <!-- FOOTER -->
+  <div class="footer">
+    🛰️ Monitor Nodos &nbsp;•&nbsp; by Kelvin &nbsp;•&nbsp;
+    <a href="https://github.com/kelvinkennedyfs-bit/monitor-nodos" target="_blank">GitHub</a>
+    &nbsp;•&nbsp; atualiza a cada 60s automaticamente
+  </div>
+
+</div>
+</body>
+</html>
