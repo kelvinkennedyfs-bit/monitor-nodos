@@ -486,8 +486,8 @@ function renderFechamento(body){
     rejeitados.forEach(function(r){
       var novoEta=r.eta?(function(){var m=e2m(r.eta)+30;var h=Math.floor(m/60);var mi=m%60;return String(h).padStart(2,'0')+':'+String(mi).padStart(2,'0');}()):'—';
       lines.push("• *"+r.driver+"*");
-      lines.push("  Facility: "+r.fac+" | Carrier: "+r.carrier);
-      lines.push("  ETA original: "+r.eta+" | Sugestão novo ETA: *"+novoEta+"*");
+      lines.push(" Facility: "+r.fac+" | Carrier: "+r.carrier);
+      lines.push(" ETA original: "+r.eta+" | Sugestão novo ETA: *"+novoEta+"*");
       lines.push("  Travel ID: "+r.tid);
       lines.push('');
     });

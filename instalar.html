@@ -471,10 +471,11 @@
   fetch('https://raw.githubusercontent.com/kelvinkennedyfs-bit/monitor-nodos/main/monitor-nodos.js')
     .then(function(r){ return r.text(); })
     .then(function(code){
-      var escaped = code.trim().replace(/'/g, '%27');
-      document.getElementById('btn-monitor').setAttribute(
-        'href', 'javascript:' + escaped
-      );
+      document.getElementById('btn-monitor').setAttribute('href', 'javascript:' + code.trim());
+    })
+    .catch(function(){
+      document.getElementById('btn-monitor').setAttribute('href', '#');
+      console.warn('[Monitor Nodos] Não foi possível carregar o script.');
     });
 </script>
 
