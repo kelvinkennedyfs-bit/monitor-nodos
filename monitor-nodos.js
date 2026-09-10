@@ -478,17 +478,17 @@ function renderFechamento(body){
     cp(lines.join('\n'),'Lista por facility');
   };
 
-  // Driver recusou
+ // Driver recusou
   body.querySelector('#mn-cp-recusou').onclick=function(){
     var rejeitados=S.rows.filter(function(r){return r.status==='rejected';});
     if(!rejeitados.length){toast('ℹ️ Nenhum driver recusou hoje.');return;}
     var lines=['🔴 *DRIVERS QUE RECUSARAM — '+br(S.date)+'*','━━━━━━━━━━━━━━━━━━━━',''];
     rejeitados.forEach(function(r){
       var novoEta=r.eta?(function(){var m=e2m(r.eta)+30;var h=Math.floor(m/60);var mi=m%60;return String(h).padStart(2,'0')+':'+String(mi).padStart(2,'0');}()):'—';
-      lines.push('• *'+r.driver+'*');
-      lines.push('  Facility: '+r.fac+' | Carrier: '+r.carrier);
+      lines.push("• *"+r.driver+"*");
+      lines.push("  Facility: "+r.fac+" | Carrier: "+r.carrier);
       lines.push("  ETA original: "+r.eta+" | Sugestão novo ETA: *"+novoEta+"*");
-      lines.push('  Travel ID: '+r.tid);
+      lines.push("  Travel ID: "+r.tid);
       lines.push('');
     });
     cp(lines.join('\n'),'Lista recusaram');
