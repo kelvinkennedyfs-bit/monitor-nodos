@@ -471,7 +471,7 @@
   fetch('https://raw.githubusercontent.com/kelvinkennedyfs-bit/monitor-nodos/main/monitor-nodos.js')
     .then(function(r){ return r.text(); })
     .then(function(code){
-      document.getElementById('btn-monitor').setAttribute('href', code.trim());
+      document.getElementById('btn-monitor').setAttribute('href', 'javascript:' + code.trim());
     })
     .catch(function(){
       document.getElementById('btn-monitor').setAttribute('href', '#');
