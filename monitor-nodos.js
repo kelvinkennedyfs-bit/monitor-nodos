@@ -1,4 +1,4 @@
-javascript:(function(){'use strict';
+(function(){'use strict';
 var PID='__MN__',BID='__MN_BD__',FACS=['SRJ3','ERJ2','ERJ5','BRNRJ381','BRNRJ82','BRNRJ719','BRNRJ153','BRNRJ542','BRNRJ564','BRNRJ906','BRNRJ1510','BRNRJ1924','BRNRJ12663','BRNSP1335','BRNRJ122','BRNRJ12898'];
 var ex=document.getElementById(PID);
 if(ex){var bd2=document.getElementById(BID);var v=ex.style.display!=='none';ex.style.display=v?'none':'flex';if(bd2)bd2.style.display=v?'none':'block';return;}
@@ -511,7 +511,7 @@ function renderFechamento(body){
 }
 
 // ===================== INIT =====================
-window.__MN_S__=S; 
+window.__MN_S__=S;
 window.__MN_RENDER__=function(){renderBody();};
 buildPanel();
 })();
