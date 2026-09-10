@@ -471,10 +471,10 @@
   fetch('https://raw.githubusercontent.com/kelvinkennedyfs-bit/monitor-nodos/main/monitor-nodos.js')
     .then(function(r){ return r.text(); })
     .then(function(code){
-      var btn = document.getElementById('btn-monitor');
-      var blob = new Blob([code], {type: 'application/javascript'});
-      var url = URL.createObjectURL(blob);
-      btn.setAttribute('href', 'javascript:void(fetch("' + url + '").then(r=>r.text()).then(c=>eval(c)))');
+      var escaped = code.trim().replace(/'/g, '%27');
+      document.getElementById('btn-monitor').setAttribute(
+        'href', 'javascript:' + escaped
+      );
     });
 </script>
 
