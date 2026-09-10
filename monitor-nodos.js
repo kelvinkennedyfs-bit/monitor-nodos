@@ -511,7 +511,7 @@ function renderFechamento(body){
 }
 
 // ===================== INIT =====================
-window.__window.__MN_S__=S;
+window.__MN_S__=S; 
 window.__MN_RENDER__=function(){renderBody();};
 buildPanel();
 })();
