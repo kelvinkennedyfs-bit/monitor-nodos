@@ -471,8 +471,10 @@
   fetch('https://raw.githubusercontent.com/kelvinkennedyfs-bit/monitor-nodos/main/monitor-nodos.js')
     .then(function(r){ return r.text(); })
     .then(function(code){
+      sessionStorage.setItem('__mn_code__', code);
       document.getElementById('btn-monitor').setAttribute(
-        'href', 'javascript:' + code.trim()
+        'href',
+        'javascript:(function(){var c=sessionStorage.getItem("__mn_code__");if(c)eval(c);})();'
       );
     });
 </script>
