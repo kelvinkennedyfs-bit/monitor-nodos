@@ -82,15 +82,16 @@ async function fetchAll(){
       var eta=etaStr(r.initHour);
       var vtype=String(r.vehicleDescriptionForFilter||'');
       var carrier=String(r.carrier||'');
-      // Kangu automático: Kangu Logistics + Utilitários
-      var autoKangu=carrier==='Kangu Logistics'&&vtype==='Utilitários';
+      var driverName=dr.driverName&&dr.driverName!=='-'?dr.driverName:'';
+      // Kangu automático
       var tid=String(r.id||'');
+      var autoKangu=carrier==='Kangu Logistics'&&vtype==='Utilitários';
       if(autoKangu&&!S.kangu[tid]){S.kangu[tid]=1;sk();}
       return {
         tid:tid,
         fac:r.facilityId||'',
         carrier:carrier,
-        driver:dr.driverName&&dr.driverName!=='-'?dr.driverName:'',
+        driver:driverName,
         plate:v.license||'',
         cycle:pl.cycleName||'',
         eta:eta,
@@ -100,11 +101,15 @@ async function fetchAll(){
         failed:c.notDelivered||0,
         pending:c.pending||0,
         vtype:vtype,
-        date:pl.cpt||S.date
+        date:pl.cpt||S.date,
+        hasDriver:!!driverName
       };
     }).filter(function(r){
       // Só facilities de nodos (sem SRJ3)
-      return FACS.includes(r.fac);
+      if(!FACS.includes(r.fac))return false;
+      // Só rotas com driver atribuído OU já ativas
+      if(!r.hasDriver&&r.status==='acaminho')return false;
+      return true;
     });
   }catch(e){console.error('[MN]',e);}
   S.loading=false;renderBody();
