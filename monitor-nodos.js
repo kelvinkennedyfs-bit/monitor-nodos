@@ -21,43 +21,39 @@ function badge(status,isLate){
 
 async function fetchAll(){
   S.loading=true;renderBody();
-  var dt=S.date,base='https://envios.adminml.com';
+  var dt=S.date;
+  var base='https://envios.adminml.com/logistics/api/monitoring/get-routes-list';
   try{
-    var rs=await Promise.all([
-      fetch(base+'/logistics/travel-management/api/schedules?date_lt_eq='+dt+'&date_gt_eq='+dt+'&step_type=last_mile',{credentials:'include'}).then(function(r){return r.json();}),
-      fetch(base+'/logistics/travel-management/api/schedules/summary?date_lt_eq='+dt+'&date_gt_eq='+dt+'&step_type=last_mile',{credentials:'include'}).then(function(r){return r.json();}),
-      fetch(base+'/logistics/rostering/api/services/details?startDate='+dt+'&endDate='+dt+'&stepType=last_mile&channel=logistics',{credentials:'include'}).then(function(r){return r.json();})
-    ]);
-    var sched=Array.isArray(rs[0])?rs[0]:(rs[0].data||[]);
-    S.sum=rs[1]||{};
-    var rost=Array.isArray(rs[2])?rs[2]:(rs[2].data||[]);
-    var rm={};rost.forEach(function(r){rm[String(r.travelID)]=r;});
-    S.rows=sched.filter(function(s){var f=s.origin_facility_id||s.destination_facility_id||'';return FACS.includes(f);}).map(function(s){
-      var tid=String(s.travel_id),ro=rm[tid]||{};
-      var drv=s.assigned&&s.assigned.drivers&&s.assigned.drivers[0];
-      var veh=s.assigned&&s.assigned.vehicles&&s.assigned.vehicles[0];
-      var st=s.steps&&s.steps[0];
-      var rst=ro.steps&&ro.steps[0];
-      return {
-        tid:tid,
-        fac:s.origin_facility_id||s.destination_facility_id||'',
-        carrier:s.carrier_description||ro.carrierName||'',
-        driver:drv?(drv.first_name+' '+drv.last_name).trim():'',
-        plate:veh?veh.license_plate:'',
-        cycle:st?st.cycle_id:'',
-        eta:rst?rst.ETA:(st?st.eta:''),
-        etd:rst?rst.ETD:'',
-        status:s.status||'',
-        service:ro.serviceName||s.service_description||'',
-        vtype:ro.vehicleType?ro.vehicleType.name:'',
-        locked:ro.locked||false,
-        limitDate:ro.limitDate||''
-      };
+    var resp=await fetch(base,{
+      method:'POST',
+      credentials:'include',
+      headers:{'Accept':'application/json','Content-Type':'application/json'},
+      body:JSON.stringify({
+        serviceCenterId:S.fac||FACS[0],
+        siteId:'MLB',
+        page:1,
+        pageSize:200,
+        order_by:'performance'
+      })
     });
+    var data=await resp.json();
+    var routes=(data&&data.routes)||[];
+    S.rows=routes.map(function(r){
+      var c=r.counters||{};
+      return {
+        tid:String(r.id||''),
+        fac:r.facilityId||'',
+        carrier:r.carrier||'',
+        driver:(r.driver&&r.driver.driverName)||'',
+        plate:r.plate||'',
+        cycle:r.cluster||'',
+        eta:'',
+        status:r.status||'',
+      };
+    }).filter(function(r){return FACS.includes(r.fac);});
   }catch(e){console.error('[MN]',e);}
   S.loading=false;renderBody();
 }
-
 function injectCSS(){
   if(document.getElementById('__mn_css__'))return;
   var st=document.createElement('style');st.id='__mn_css__';
@@ -485,10 +481,10 @@ function renderFechamento(body){
     var lines=['🔴 *DRIVERS QUE RECUSARAM — '+br(S.date)+'*','━━━━━━━━━━━━━━━━━━━━',''];
     rejeitados.forEach(function(r){
       var novoEta=r.eta?(function(){var m=e2m(r.eta)+30;var h=Math.floor(m/60);var mi=m%60;return String(h).padStart(2,'0')+':'+String(mi).padStart(2,'0');}()):'—';
-      lines.push("• *"+r.driver+"*");
-      lines.push(" Facility: "+r.fac+" | Carrier: "+r.carrier);
-      lines.push(" ETA original: "+r.eta+" | Sugestão novo ETA: *"+novoEta+"*");
-      lines.push("  Travel ID: "+r.tid);
+      lines.push('• *'+r.driver+'*');
+      lines.push('  Facility: '+r.fac+' | Carrier: '+r.carrier);
+      lines.push('  ETA original: '+r.eta+' | Sugestao novo ETA: *'+novoEta+'*');
+      lines.push('  Travel ID: '+r.tid);
       lines.push('');
     });
     cp(lines.join('\n'),'Lista recusaram');
