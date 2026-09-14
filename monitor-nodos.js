@@ -21,39 +21,51 @@ function badge(status,isLate){
 
 async function fetchAll(){
   S.loading=true;renderBody();
-  var dt=S.date;
   var base='https://envios.adminml.com/logistics/api/monitoring/get-routes-list';
   try{
-    var resp=await fetch(base,{
-      method:'POST',
-      credentials:'include',
-      headers:{'Accept':'application/json','Content-Type':'application/json'},
-      body:JSON.stringify({
-        serviceCenterId:S.fac||FACS[0],
-        siteId:'MLB',
-        page:1,
-        pageSize:200,
-        order_by:'performance'
-      })
-    });
-    var data=await resp.json();
-    var routes=(data&&data.routes)||[];
-    S.rows=routes.map(function(r){
+    var all=[];
+    var page=1;
+    var hasNext=true;
+    while(hasNext&&page<=20){
+      var resp=await fetch(base,{
+        method:'POST',
+        credentials:'include',
+        headers:{'Accept':'application/json','Content-Type':'application/json'},
+        body:JSON.stringify({serviceCenterId:'SRJ3',siteId:'MLB',page:page,pageSize:50,order_by:'performance'})
+      });
+      var data=await resp.json();
+      var routes=(data&&data.routes)||[];
+      all=all.concat(routes);
+      hasNext=data&&data.pagination&&data.pagination.hasNext;
+      page++;
+    }
+    S.rows=all.map(function(r){
       var c=r.counters||{};
+      var v=r.vehicle||{};
+      var pl=r.plannedRoute||{};
+      var dr=r.driver||{};
+      var sub=String(r.substatus||'').toLowerCase();
+      var st=r.status||'';
+      var status='defined';
+      if(st==='active'||st==='started'||sub==='delivering') status='started';
+      else if(st==='planned'||sub==='on_way_destination_facility') status='defined';
+      else if(st==='closed'||st==='finished') status='canceled';
       return {
         tid:String(r.id||''),
         fac:r.facilityId||'',
         carrier:r.carrier||'',
-        driver:(r.driver&&r.driver.driverName)||'',
-        plate:r.plate||'',
-        cycle:r.cluster||'',
-        eta:'',
-        status:r.status||'',
+        driver:dr.driverName&&dr.driverName!=='-'?dr.driverName:'',
+        plate:v.license||'',
+        cycle:pl.cycleName||'',
+        eta:r.initHour||'',
+        status:status,
+        etd:''
       };
     }).filter(function(r){return FACS.includes(r.fac);});
   }catch(e){console.error('[MN]',e);}
   S.loading=false;renderBody();
 }
+
 function injectCSS(){
   if(document.getElementById('__mn_css__'))return;
   var st=document.createElement('style');st.id='__mn_css__';
