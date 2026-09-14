@@ -468,11 +468,20 @@
 </div>
 
 <script>
-  fetch('https://raw.githubusercontent.com/kelvinkennedyfs-bit/monitor-nodos/main/monitor-nodos.js')
+  fetch('https://raw.githubusercontent.com/kelvinkennedyfs-bit/monitor-nodos/main/monitor-nodos.js?v=' + Date.now())
     .then(function(r){ return r.text(); })
     .then(function(code){
-      var uri = 'javascript:' + encodeURIComponent(code.trim());
-      document.getElementById('btn-monitor').setAttribute('href', uri);
+      function utf8ToBase64(str){
+        return btoa(unescape(encodeURIComponent(str)));
+      }
+      var b64 = utf8ToBase64(code.trim());
+      var bkm = "javascript:(function(){try{"
+        + "var s=document.createElement('script');"
+        + "s.textContent=decodeURIComponent(escape(atob('" + b64 + "')));"
+        + "document.documentElement.appendChild(s);s.remove();"
+        + "}catch(e){alert('Erro: '+e.message);}})();";
+      document.getElementById('btn-monitor').href = bkm;
+      console.log('[Monitor Nodos] Pronto: ' + (bkm.length/1024).toFixed(1) + ' KB');
     });
 </script>
 
