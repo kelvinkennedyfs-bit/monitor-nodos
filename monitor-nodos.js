@@ -32,15 +32,13 @@ function cp(txt,label){
 
 function mapStatus(status,substatus){
   var st=String(status||'').toLowerCase();
-  var sub=String(substatus||'').toLowerCase();
-  if(st==='closed'||st==='finished') return 'encerrada';
-  if(st==='rejected') return 'recusou';
-  if(st==='canceled'||st==='cancelled') return 'cancelado';
-  if(sub==='on_way_destination_facility') return 'acaminho';
-  if(sub==='at_destination_facility') return 'pendente';
-  if(st==='active'||sub==='started') return 'emrota';
-  if(st==='planned') return 'acaminho';
-  return 'pendente';
+  if(st==='started')    return 'emrota';
+  if(st==='accepted')   return 'pendente';
+  if(st==='not_defined')return 'acaminho';
+  if(st==='rejected')   return 'recusou';
+  if(st==='canceled')   return 'cancelado';
+  if(st==='finished'||st==='closed') return 'encerrada';
+  return 'acaminho';
 }
 
 function badgeStatus(st,isLate){
@@ -59,58 +57,72 @@ function badgeStatus(st,isLate){
 
 async function fetchAll(){
   S.loading=true;renderBody();
-  var base='https://envios.adminml.com/logistics/api/monitoring/get-routes-list';
+  var base='https://envios.adminml.com/logistics/travel-management/api/schedules';
   try{
     var all=[],page=1,hasNext=true;
     while(hasNext&&page<=20){
       var resp=await fetch(base,{
         method:'POST',credentials:'include',
         headers:{'Accept':'application/json','Content-Type':'application/json'},
-        body:JSON.stringify({serviceCenterId:'SRJ3',siteId:'MLB',page:page,pageSize:50,order_by:'performance'})
+        body:JSON.stringify({
+          page:page,
+          per_page:100,
+          date_lt_eq:S.date,
+          date_gt_eq:S.date,
+          eta_from:'',eta_to:'',
+          carriers:[],created_by_apps:[],created_by_users:[],
+          labels:[],origin_facilities:FACS,
+          search:'',status:[],
+          step_type:'last_mile',
+          travel_ids:[],vehicles:[]
+        })
       });
       var data=await resp.json();
-      all=all.concat((data&&data.routes)||[]);
-      hasNext=!!(data&&data.pagination&&data.pagination.hasNext);
+      var routes=(data&&data.data)||[];
+      all=all.concat(routes);
+      // Verifica se tem mais páginas
+      hasNext=routes.length===100;
       page++;
     }
+
     S.rows=all.map(function(r){
-      var c=r.counters||{};
-      var v=r.vehicle||{};
-      var pl=r.plannedRoute||{};
-      var dr=r.driver||{};
-      var st=mapStatus(r.status,r.substatus);
-      var eta=etaStr(r.initHour);
-      var vtype=String(r.vehicleDescriptionForFilter||'');
-      var carrier=String(r.carrier||'');
-      var driverName=dr.driverName&&dr.driverName!=='-'?dr.driverName:'';
+      var assigned=r.assigned||{};
+      var drivers=assigned.drivers||[];
+      var vehicles=assigned.vehicles||[];
+      var step=r.steps&&r.steps[0]||{};
+      var drv=drivers[0]||{};
+      var veh=vehicles[0]||{};
+      var driverName=(drv.first_name||drv.last_name)
+        ?(drv.first_name+' '+drv.last_name).trim()
+        :'';
+      var st=mapStatus(r.status,'');
+      var tid=String(r.travel_id||'');
+      var carrier=String(r.carrier_description||'');
+      var vtype=String(r.service_description||'');
       // Kangu automático
-      var tid=String(r.id||'');
-      var autoKangu=carrier==='Kangu Logistics'&&vtype==='Utilitários';
+      var autoKangu=carrier==='Kangu Logistics'&&vtype.toLowerCase().indexOf('utilitario')>=0;
       if(autoKangu&&!S.kangu[tid]){S.kangu[tid]=1;sk();}
       return {
         tid:tid,
-        fac:r.facilityId||'',
+        fac:r.origin_facility_id||'',
         carrier:carrier,
         driver:driverName,
-        plate:v.license||'',
-        cycle:pl.cycleName||'',
-        eta:eta,
+        plate:veh.license_plate||'',
+        cycle:step.cycle_id||'',
+        eta:step.eta||'',
         status:st,
-        total:c.total||0,
-        delivered:c.delivered||0,
-        failed:c.notDelivered||0,
-        pending:c.pending||0,
+        total:0,
+        delivered:0,
+        failed:0,
+        pending:0,
         vtype:vtype,
-        date:pl.cpt||S.date,
+        date:r.date||S.date,
         hasDriver:!!driverName
       };
     }).filter(function(r){
-      // Só facilities de nodos (sem SRJ3)
-      if(!FACS.includes(r.fac))return false;
-      // Só rotas com driver atribuído OU já ativas
-      if(!r.hasDriver&&r.status==='acaminho')return false;
-      return true;
+      return FACS.includes(r.fac);
     });
+
   }catch(e){console.error('[MN]',e);}
   S.loading=false;renderBody();
 }
@@ -1034,4 +1046,3 @@ buildPanel();
 })();
 
 
-      
