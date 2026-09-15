@@ -1,7 +1,6 @@
 (function(){'use strict';
 var PID='__MN__',BID='__MN_BD__';
-var FACS=['ERJ2','ERJ5','BRNRJ381','BRNRJ82','BRNRJ719','BRNRJ153','BRNRJ542','BRNRJ564','BRNRJ906','BRNRJ1510','BRNRJ1924','BRNRJ12663','BRNSP1335','BRNRJ122','BRNRJ12898'];
-
+var FACS=['BRNRJ381','BRNRJ82','BRNRJ719','BRNRJ153','BRNRJ542','BRNRJ564','BRNRJ906','BRNRJ1510','BRNRJ1924','BRNRJ12663','BRNSP1335','BRNRJ122','BRNRJ12898'];
 var ex=document.getElementById(PID);
 if(ex){var bd2=document.getElementById(BID);var v=ex.style.display!=='none';ex.style.display=v?'none':'flex';if(bd2)bd2.style.display=v?'none':'block';return;}
 
@@ -58,6 +57,16 @@ function badgeStatus(st,isLate){
   return m[st]||'<span class="mn-bx mn-bgr">'+st+'</span>';
 }
 
+function etaToCiclo(eta){
+  if(!eta||eta==='00:00')return '';
+  var m=e2m(eta);
+  if(m===null)return '';
+  if(m < 8*60)  return 'CHP';
+  if(m < 11*60) return 'AM1';
+  if(m < 15*60) return 'PM1';
+  return 'SD';
+}
+
 async function fetchAll(){
   S.loading=true;renderBody();
   var base='https://envios.adminml.com/logistics/travel-management/api/schedules';
@@ -100,7 +109,7 @@ async function fetchAll(){
       var st=mapStatus(r.status,r.substatus||'');
       var vtype=String(r.service_description||'');
       var eta=(step.eta&&step.eta!=='00:00')?step.eta:'';
-      var cycle=step.cycle_id||'';
+      var cycle=etaToCiclo(eta);
       // Kangu automático
       var autoKangu=carrier==='Kangu Logistics'&&vtype.toLowerCase().indexOf('utilitario')>=0;
       if(autoKangu&&!S.kangu[tid]){S.kangu[tid]=1;sk();}
@@ -430,8 +439,7 @@ function renderNodos(body){
 function renderEscala(body){
   var today=S.rows.filter(function(r){return r.date===S.date;});
   var rows=today.filter(function(r){
-    return r.driver&&r.status!=='cancelado'&&r.status!=='recusou'&&r.status!=='acaminho';
-  });
+return r.driver&&r.status!=='cancelado'&&r.status!=='recusou';  });
 
   var ciclos=['CHP','AM1','PM1','SD'];
   var cicloLabel={'CHP':'CHP/AM0','AM1':'AM','PM1':'PM','SD':'SD'};
