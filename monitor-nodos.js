@@ -30,14 +30,16 @@ function cp(txt,label){
   navigator.clipboard.writeText(txt).then(function(){toast('✅ '+(label?label+' ':'')+'copiado!');});
 }
 
-function mapStatus(status,substatus){
+function mapStatus(status,travelStatus){
   var st=String(status||'').toLowerCase();
-  if(st==='started')    return 'emrota';
-  if(st==='accepted')   return 'pendente';
-  if(st==='not_defined')return 'acaminho';
-  if(st==='rejected')   return 'recusou';
-  if(st==='canceled')   return 'cancelado';
-  if(st==='finished'||st==='closed') return 'encerrada';
+  var ts=String(travelStatus||'').toLowerCase();
+  if(st==='started'||ts==='started') return 'emrota';
+  if(st==='done'&&ts==='created')    return 'pendente';
+  if(st==='done'&&ts==='finished')   return 'encerrada';
+  if(st==='rejected')                return 'recusou';
+  if(st==='canceled')                return 'cancelado';
+  if(st==='not_defined'||st==='')    return 'acaminho';
+  if(st==='done')                    return 'pendente';
   return 'acaminho';
 }
 
@@ -57,66 +59,45 @@ function badgeStatus(st,isLate){
 
 async function fetchAll(){
   S.loading=true;renderBody();
-  var base='https://envios.adminml.com/logistics/travel-management/api/schedules';
+  var base='https://envios.adminml.com/logistics/rostering/api/services/details';
   try{
-    var all=[],page=1,hasNext=true;
-    while(hasNext&&page<=20){
-      var resp=await fetch(base,{
-        method:'POST',credentials:'include',
-        headers:{'Accept':'application/json','Content-Type':'application/json'},
-        body:JSON.stringify({
-          page:page,
-          per_page:100,
-          date_lt_eq:S.date,
-          date_gt_eq:S.date,
-          eta_from:'',eta_to:'',
-          carriers:[],created_by_apps:[],created_by_users:[],
-          labels:[],origin_facilities:FACS,
-          search:'',status:[],
-          step_type:'last_mile',
-          travel_ids:[],vehicles:[]
-        })
-      });
-      var data=await resp.json();
-      var routes=(data&&data.data)||[];
-      all=all.concat(routes);
-      // Verifica se tem mais páginas
-      hasNext=routes.length===100;
-      page++;
-    }
+    var url=base+'?startDate='+S.date+'&endDate='+S.date+'&stepType=last_mile&channel=logistics';
+    var resp=await fetch(url,{credentials:'include',headers:{'Accept':'application/json'}});
+    var data=await resp.json();
+    var all=(data&&data.data)||[];
 
     S.rows=all.map(function(r){
-      var assigned=r.assigned||{};
-      var drivers=assigned.drivers||[];
-      var vehicles=assigned.vehicles||[];
-      var step=r.steps&&r.steps[0]||{};
+      var asgn=(r.assignments&&r.assignments[0])||{};
+      var drivers=asgn.drivers||[];
+      var vehicles=asgn.vehicles||[];
+      var step=(r.steps&&r.steps[0])||{};
       var drv=drivers[0]||{};
       var veh=vehicles[0]||{};
-      var driverName=(drv.first_name||drv.last_name)
-        ?(drv.first_name+' '+drv.last_name).trim()
-        :'';
-      var st=mapStatus(r.status,'');
-      var tid=String(r.travel_id||'');
-      var carrier=String(r.carrier_description||'');
-      var vtype=String(r.service_description||'');
+      var driverName=drv.name||'';
+      var carrier=asgn.carrierName||'';
+      var fac=asgn.facility||'';
+      var tid=String(r.travelID||'');
+      var st=mapStatus(asgn.status||'',asgn.travelStatus||'');
+      var vtype=String(r.serviceName||'');
       // Kangu automático
       var autoKangu=carrier==='Kangu Logistics'&&vtype.toLowerCase().indexOf('utilitario')>=0;
       if(autoKangu&&!S.kangu[tid]){S.kangu[tid]=1;sk();}
       return {
         tid:tid,
-        fac:r.origin_facility_id||'',
+        fac:fac,
         carrier:carrier,
         driver:driverName,
-        plate:veh.license_plate||'',
-        cycle:step.cycle_id||'',
-        eta:step.eta||'',
+        plate:veh.plate||'',
+        cycle:step.cycle||'',
+        eta:step.ETA||'',
+        etd:step.ETD||'',
         status:st,
         total:0,
         delivered:0,
         failed:0,
         pending:0,
         vtype:vtype,
-        date:r.date||S.date,
+        date:r.startDate||S.date,
         hasDriver:!!driverName
       };
     }).filter(function(r){
