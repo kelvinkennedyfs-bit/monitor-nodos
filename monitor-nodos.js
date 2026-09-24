@@ -501,7 +501,8 @@ function renderPlan(body){
       +'<span style="font-size:13px;font-weight:700;color:#00d4ff">'+fac+'</span>'
       +(semRota.length?'<span style="background:rgba(255,140,0,.2);color:#ff8c00;font-size:10px;padding:2px 8px;border-radius:10px;font-weight:600">SEM '+semRota.map(function(c){return cicloLabel[c];}).join(', ')+'</span>':'')
       +'</div>'
-      +'<button class="mn-btn g sm" data-cp-fac="'+fac+'">Copiar msg</button>'
+      +'<button class="mn-btn g sm" data-cp-fac="'+fac+'">Copiar hoje</button>'
++'<button class="mn-btn y sm" data-cp-fac-amanha="'+fac+'">CHP amanhã</button>'
       +'</div>';
 
     html+='<div style="padding:10px 16px;display:flex;gap:8px;flex-wrap:wrap">';
@@ -570,6 +571,23 @@ body.querySelector('#mn-cp-plan-amanha').onclick=function(){
     };
   });
 
+  // COPIAR CHP AMANHÃ POR FACILITY
+body.querySelectorAll('[data-cp-fac-amanha]').forEach(function(btn){
+  btn.onclick=function(){
+    var fac=this.dataset.cpFacAmanha;
+    var fp=S.planAmanha&&S.planAmanha[fac];
+    if(!fp||!fp.CHP||!fp.CHP.rotas){
+      toast('Nenhum CHP de amanhã para '+fac);return;
+    }
+    var lines=[
+      'Boa tarde!',
+      '',
+      'Para amanhã temos '+fp.CHP.rotas+' rotas no ciclo *CHP*'
+    ];
+    cp(lines.join('\n'),'CHP amanhã '+fac);
+  };
+});
+
   // Carrega planejamento ao abrir a aba
   if(!S.plan){
     fetchPlan().then(function(){renderPlan(body);});
@@ -632,7 +650,11 @@ function renderNodos(body){
     +'<option value="SD"'+(S.fc==='SD'?' selected':'')+'>SD</option>'
     +'</select>'
     +'<input id="mn-ft" class="mn-inp" placeholder="🔍 Buscar..." value="'+S.ft+'">'
-    +'<span style="font-size:12px;color:#506070">'+rows.length+' de '+total+' rotas</span>'
+    +'<select id="mn-est" class="mn-sel"><option value="">Todos</option>'
+    +'<option value="emrota"'+(S.est==='emrota'?' selected':'')+'>✅ Subiram</option>'
+    +'<option value="pendente"'+(S.est==='pendente'?' selected':'')+'>🟡 Pendentes</option>'
+    +'</select>'
+    +'<span style="font-size:12px;color:#506070">'+rowsFilt.length+' drivers</span>'
     +'</div>';
 
   // TABELA
@@ -693,11 +715,14 @@ function renderEscala(body){
   if(!S.eff)S.eff='';
   if(!S.efc)S.efc='';
 
+  if(!S.est)S.est='';
   var rowsFilt=rows.filter(function(r){
-    if(S.efc&&r.cycle!==S.efc)return false;
-    if(S.eff&&r.fac!==S.eff)return false;
-    if(S.ef&&r.eta!==S.ef)return false;
-    return true;
+  if(S.efc&&r.cycle!==S.efc)return false;
+  if(S.eff&&r.fac!==S.eff)return false;
+  if(S.ef&&r.eta!==S.ef)return false;
+  if(S.est==='emrota'&&r.status!=='emrota'&&r.status!=='encerrada')return false;
+  if(S.est==='pendente'&&r.status==='emrota')return false;
+  return true;
   });
 
   var html='<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;align-items:center">'
@@ -811,6 +836,7 @@ function renderEscala(body){
   body.querySelector('#mn-efc').onchange=function(){S.efc=this.value;renderEscala(body);};
   body.querySelector('#mn-eff').onchange=function(){S.eff=this.value;renderEscala(body);};
   body.querySelector('#mn-ef').onchange=function(){S.ef=this.value;renderEscala(body);};
+  body.querySelector('#mn-est').onchange=function(){S.est=this.value;renderEscala(body);};
 
   // COPIAR POR ETA + FACILITY
   body.querySelectorAll('[data-copy-eta]').forEach(function(btn){
