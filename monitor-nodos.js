@@ -216,25 +216,25 @@ async function fetchPlan(){
   try{
     var hoje=gd();
     var ontem=ad(hoje,-1);
-    // Converte para formato dd/mm/yyyy para comparar com planilha
     function toBR(d){var p=d.split('-');return p[2]+'/'+p[1]+'/'+p[0];}
     var hojeStr=toBR(hoje);
     var ontemStr=toBR(ontem);
+
     var resp=await fetch(SHEET_URL+'&cachebust='+Date.now());
     var csv=await resp.text();
     var lines=csv.split('\n');
-    var headers=lines[0].split(',').map(function(h){return h.trim().replace(/"/g,'');});
+    var headers=lines[0].split(',').map(function(h){return h.trim().replace(/"/g,'').replace(/\r/g,'');});
     var iRoute=headers.indexOf('RTG_ROUTE_NAME');
     var iFac=headers.indexOf('nodo');
     var iShp=headers.indexOf('SHP_FACILITY_ID');
     var iData=headers.indexOf('data_sorting');
     var iSaca=headers.indexOf('saca');
 
-    var plan={};// plan[fac][ciclo] = {rotas:0, sacas:0, etas:[]}
+    var plan={};
 
     lines.slice(1).forEach(function(line){
       if(!line.trim())return;
-      var cols=line.split(',').map(function(c){return c.trim().replace(/"/g,'');});
+      var cols=line.split(',').map(function(c){return c.trim().replace(/"/g,'').replace(/\r/g,'');});
       var shp=cols[iShp]||'';
       if(shp!=='SRJ3')return;
       var fac=cols[iFac]||'';
@@ -245,15 +245,17 @@ async function fetchPlan(){
 
       // Detecta ciclo pelo prefixo
       var ciclo='';
-      if(route.substring(0,3)==='CHP') ciclo='CHP';
-      else if(route.substring(0,3)==='AM1'||route.substring(0,2)==='AM') ciclo='AM1';
-      else if(route.substring(0,3)==='PM1'||route.substring(0,2)==='PM') ciclo='PM1';
-      else if(route.substring(0,2)==='SD') ciclo='SD';
+      var r3=route.substring(0,3).toUpperCase();
+      var r2=route.substring(0,2).toUpperCase();
+      if(r3==='CHP') ciclo='CHP';
+      else if(r3==='AM1'||r3==='AM2'||r3==='AM3'||r2==='AM') ciclo='AM1';
+      else if(r3==='PM1'||r3==='PM2'||r3==='PM3'||r2==='PM') ciclo='PM1';
+      else if(r2==='SD') ciclo='SD';
       if(!ciclo)return;
 
       // Valida data por ciclo
       var dataOk=false;
-      if(ciclo==='CHP'&&data===ontemStr) dataOk=true;
+      if(ciclo==='CHP'&&(data===ontemStr||data===hojeStr)) dataOk=true;
       if((ciclo==='AM1'||ciclo==='PM1'||ciclo==='SD')&&data===hojeStr) dataOk=true;
       if(!dataOk)return;
 
@@ -263,7 +265,30 @@ async function fetchPlan(){
       plan[fac][ciclo].sacas+=saca;
     });
 
+    // Separa CHP amanhã (pedidos feitos às 14h30 com data de hoje)
+    S.planAmanha={};
+    var amanha=ad(hoje,1);
+    var amanhaStr=toBR(amanha);
+    lines.slice(1).forEach(function(line){
+      if(!line.trim())return;
+      var cols=line.split(',').map(function(c){return c.trim().replace(/"/g,'').replace(/\r/g,'');});
+      var shp=cols[iShp]||'';
+      if(shp!=='SRJ3')return;
+      var fac=cols[iFac]||'';
+      if(!FACS.includes(fac))return;
+      var route=cols[iRoute]||'';
+      var data=cols[iData]||'';
+      var saca=parseInt(cols[iSaca])||0;
+      var r3=route.substring(0,3).toUpperCase();
+      if(r3!=='CHP')return;
+      if(data!==hojeStr)return; // CHP do amanhã vem com data de hoje às 14h30
+      if(!S.planAmanha[fac])S.planAmanha[fac]={CHP:{rotas:0,sacas:0}};
+      S.planAmanha[fac].CHP.rotas++;
+      S.planAmanha[fac].CHP.sacas+=saca;
+    });
+
     S.plan=plan;
+    console.log('[MN Plan] OK:', Object.keys(plan).length,'facilities');
   }catch(e){console.error('[MN Plan]',e);S.plan={};}
   S.planLoading=false;
 }
@@ -434,11 +459,12 @@ function renderPlan(body){
     });
   });
 
-  var html='<div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;align-items:center">'
-    +'<button class="mn-btn g" id="mn-cp-plan-geral">Copiar Resumo Geral</button>'
-    +'<button class="mn-btn" id="mn-ref-plan">Atualizar Planilha</button>'
-    +'<span style="font-size:11px;color:#506070">Dados de '+br(hoje)+'</span>'
-    +'</div>';
+  html+='<div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;align-items:center">'
+  +'<button class="mn-btn g" id="mn-cp-plan-geral">Copiar Resumo Geral</button>'
+  +'<button class="mn-btn y" id="mn-cp-plan-amanha">Copiar CHP Amanhã</button>'
+  +'<button class="mn-btn" id="mn-ref-plan">Atualizar Planilha</button>'
+  +'<span style="font-size:11px;color:#506070">Dados de '+br(hoje)+'</span>'
+  +'</div>';
 
   // KPIs gerais
   html+='<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px">';
@@ -500,22 +526,29 @@ function renderPlan(body){
 
   body.innerHTML=html;
 
-  // ATUALIZAR PLANILHA
-  body.querySelector('#mn-ref-plan').onclick=function(){
-    S.plan=null;
-    fetchPlan().then(function(){renderPlan(body);});
-    body.innerHTML='<div style="display:flex;align-items:center;gap:10px;color:#00d4ff;padding:40px;justify-content:center"><div class="mn-sp"></div><span>Atualizando...</span></div>';
-  };
-
-  // COPIAR RESUMO GERAL
-  body.querySelector('#mn-cp-plan-geral').onclick=function(){
-    var lines=['Bom dia!','','Para hoje temos:'];
-    ciclos.forEach(function(c){
-      if(!totais[c].rotas)return;
-      lines.push(totais[c].rotas+' rotas no ciclo '+cicloLabel[c]);
+    // COPIAR CHP AMANHÃ
+body.querySelector('#mn-cp-plan-amanha').onclick=function(){
+  var amanha=ad(gd(),1);
+  var lines=['Boa tarde!',''];
+  var temAlgo=false;
+  FACS.forEach(function(fac){
+    var fp=S.planAmanha&&S.planAmanha[fac];
+    if(!fp||!fp.CHP||!fp.CHP.rotas)return;
+    lines.push('Para amanhã temos '+fp.CHP.rotas+' rotas no ciclo *CHP* — '+fac);
+    temAlgo=true;
+  });
+  if(!temAlgo){
+    // Resumo geral
+    var totalCHP=0;
+    FACS.forEach(function(fac){
+      var fp=S.planAmanha&&S.planAmanha[fac];
+      if(fp&&fp.CHP)totalCHP+=fp.CHP.rotas;
     });
-    cp(lines.join('\n'),'Resumo geral');
-  };
+    if(totalCHP===0){toast('Nenhum CHP de amanhã encontrado.');return;}
+    lines.push('Para amanhã temos '+totalCHP+' rotas no ciclo *CHP*');
+  }
+  cp(lines.join('\n'),'CHP amanhã');
+};
 
   // COPIAR POR FACILITY
   body.querySelectorAll('[data-cp-fac]').forEach(function(btn){
