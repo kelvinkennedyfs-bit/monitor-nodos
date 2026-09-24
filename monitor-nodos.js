@@ -596,6 +596,7 @@ body.querySelectorAll('[data-cp-fac-amanha]').forEach(function(btn){
 
 function renderNodos(body){
   var rows=S.rows.filter(function(r){return r.date===S.date;});
+  if(!S.est)S.est='';
   rows=rows.filter(function(r){
     if(S.ff&&r.fac!==S.ff)return false;
     if(S.fs&&r.status!==S.fs)return false;
@@ -692,6 +693,7 @@ function renderNodos(body){
   body.querySelector('#mn-fs').onchange=function(){S.fs=this.value;renderBody();};
   body.querySelector('#mn-fc').onchange=function(){S.fc=this.value;renderBody();};
   body.querySelector('#mn-ft').oninput=function(){S.ft=this.value;renderBody();};
+  if(body.querySelector('#mn-est'))body.querySelector('#mn-est').onchange=function(){S.est=this.value;renderBody();};
 
   body.querySelectorAll('[data-kangu="1"]').forEach(function(btn){
     btn.onclick=function(){
@@ -757,6 +759,7 @@ function renderEscala(body){
     body.querySelector('#mn-efc').onchange=function(){S.efc=this.value;renderEscala(body);};
     body.querySelector('#mn-eff').onchange=function(){S.eff=this.value;renderEscala(body);};
     body.querySelector('#mn-ef').onchange=function(){S.ef=this.value;renderEscala(body);};
+    if(body.querySelector('#mn-est'))body.querySelector('#mn-est').onchange=function(){S.est=this.value;renderEscala(body);};
     body.querySelector('#mn-cp-escala-completa').onclick=function(){toast('ℹ️ Nenhum driver.');};
     return;
   }
