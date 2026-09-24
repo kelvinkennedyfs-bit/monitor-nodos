@@ -216,13 +216,17 @@ async function fetchPlan(){
   try{
     var hoje=gd();
     var ontem=ad(hoje,-1);
+    // Converte para formato dd/mm/yyyy para comparar com planilha
+    function toBR(d){var p=d.split('-');return p[2]+'/'+p[1]+'/'+p[0];}
+    var hojeStr=toBR(hoje);
+    var ontemStr=toBR(ontem);
     var resp=await fetch(SHEET_URL+'&cachebust='+Date.now());
     var csv=await resp.text();
     var lines=csv.split('\n');
     var headers=lines[0].split(',').map(function(h){return h.trim().replace(/"/g,'');});
     var iRoute=headers.indexOf('RTG_ROUTE_NAME');
     var iFac=headers.indexOf('nodo');
-    var iShp=headers.indexOf('SHP_FACILITY');
+    var iShp=headers.indexOf('SHP_FACILITY_ID');
     var iData=headers.indexOf('data_sorting');
     var iSaca=headers.indexOf('saca');
 
@@ -249,8 +253,8 @@ async function fetchPlan(){
 
       // Valida data por ciclo
       var dataOk=false;
-      if(ciclo==='CHP'&&data===ontem) dataOk=true;
-      if((ciclo==='AM1'||ciclo==='PM1'||ciclo==='SD')&&data===hoje) dataOk=true;
+      if(ciclo==='CHP'&&data===ontemStr) dataOk=true;
+      if((ciclo==='AM1'||ciclo==='PM1'||ciclo==='SD')&&data===hojeStr) dataOk=true;
       if(!dataOk)return;
 
       if(!plan[fac])plan[fac]={};
