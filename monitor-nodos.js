@@ -459,7 +459,7 @@ function renderPlan(body){
     });
   });
 
-  html+='<div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;align-items:center">'
+  var html='<div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;align-items:center">'
   +'<button class="mn-btn g" id="mn-cp-plan-geral">Copiar Resumo Geral</button>'
   +'<button class="mn-btn y" id="mn-cp-plan-amanha">Copiar CHP Amanhã</button>'
   +'<button class="mn-btn" id="mn-ref-plan">Atualizar Planilha</button>'
@@ -654,7 +654,7 @@ function renderNodos(body){
     +'<option value="emrota"'+(S.est==='emrota'?' selected':'')+'>✅ Subiram</option>'
     +'<option value="pendente"'+(S.est==='pendente'?' selected':'')+'>🟡 Pendentes</option>'
     +'</select>'
-    +'<span style="font-size:12px;color:#506070">'+rowsFilt.length+' drivers</span>'
+    +'<span style="font-size:12px;color:#506070">'+rows.length+' de '+total+' rotas</span>'
     +'</div>';
 
   // TABELA
@@ -743,6 +743,10 @@ function renderEscala(body){
     html+='<option value="'+eta+'"'+(S.ef===eta?' selected':'')+'>'+eta+'</option>';
   });
   html+='</select>'
+    +'<select id="mn-est" class="mn-sel"><option value="">Todos</option>'
+    +'<option value="emrota"'+(S.est==='emrota'?' selected':'')+'>✅ Subiram</option>'
+    +'<option value="pendente"'+(S.est==='pendente'?' selected':'')+'>🟡 Pendentes</option>'
+    +'</select>'
     +'<span style="font-size:12px;color:#506070">'+rowsFilt.length+' drivers</span>'
     +'<button class="mn-btn g" id="mn-cp-escala-completa" style="margin-left:auto">📋 Escala Completa</button>'
     +'</div>';
