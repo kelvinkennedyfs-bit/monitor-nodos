@@ -4,7 +4,25 @@ var FACS=['BRNRJ381','BRNRJ82','BRNRJ719','BRNRJ153','BRNRJ542','BRNRJ564','BRNR
 var ex=document.getElementById(PID);
 if(ex){var bd2=document.getElementById(BID);var v=ex.style.display!=='none';ex.style.display=v?'none':'flex';if(bd2)bd2.style.display=v?'none':'block';return;}
 
-var S={date:gd(),tab:'nodos',rows:[],loading:false,kangu:JSON.parse(localStorage.getItem('__nk__')||'{}'),ct:null,cd:60,ff:'',fs:'',fc:'',ft:''};
+var SHEET_URL='https://docs.google.com/spreadsheets/d/e/2PACX-1vS1htXqxADWFjHPvAZuOWfhDTnwWVv1wjJQLifOBFtCBZQ3dFGtRHL956mY2JZw1PglzexKI9X40jw7/pub?gid=1898881109&single=true&output=csv';
+
+var FAC_ETA={
+  'BRNSP1335':{'CHP':'09:30','AM1':'13:30'},
+  'BRNRJ542': {'CHP':'09:30','AM1':'10:30','PM1':'14:30'},
+  'BRNRJ12663':{'AM1':'10:30'},
+  'BRNRJ1510': {'CHP':'09:30','AM1':'10:30'},
+  'BRNRJ153':  {'CHP':'09:30','AM1':'10:30'},
+  'BRNRJ381':  {'CHP':'09:30','AM1':'10:30','PM1':'14:30'},
+  'BRNRJ564':  {'CHP':'09:30','AM1':'10:30'},
+  'BRNRJ1924': {'CHP':'09:30','AM1':'10:30'},
+  'BRNRJ82':   {'CHP':'09:30','AM1':'10:30'},
+  'BRNRJ719':  {'CHP':'09:30','AM1':'10:30','PM1':'14:30'},
+  'BRNRJ12898':{'AM1':'10:30'},
+  'BRNRJ122':  {'CHP':'09:30'},
+  'BRNRJ906':  {'CHP':'09:30','AM1':'10:30'}
+};
+
+var S={date:gd(),tab:'nodos',rows:[],loading:false,kangu:JSON.parse(localStorage.getItem('__nk__')||'{}'),ct:null,cd:60,ff:'',fs:'',fc:'',ft:'',plan:null,planLoading:false};
 
 function gd(){return new Date().toISOString().slice(0,10);}
 function ad(s,n){var d=new Date(s+'T12:00:00');d.setDate(d.getDate()+n);return d.toISOString().slice(0,10);}
@@ -61,9 +79,9 @@ function etaToCiclo(eta){
   if(!eta||eta==='00:00')return '';
   var m=e2m(eta);
   if(m===null)return '';
-  if(m < 8*60)  return 'CHP';
-  if(m < 11*60) return 'AM1';
-  if(m < 15*60) return 'PM1';
+  if(m < 9*60)  return 'CHP';
+  if(m < 13*60) return 'AM1';
+  if(m < 16 *60) return 'PM1';
   return 'SD';
 }
 
@@ -193,6 +211,59 @@ function injectCSS(){
   document.head.appendChild(st);
 }
 
+async function fetchPlan(){
+  S.planLoading=true;
+  try{
+    var hoje=gd();
+    var ontem=ad(hoje,-1);
+    var resp=await fetch(SHEET_URL+'&cachebust='+Date.now());
+    var csv=await resp.text();
+    var lines=csv.split('\n');
+    var headers=lines[0].split(',').map(function(h){return h.trim().replace(/"/g,'');});
+    var iRoute=headers.indexOf('RTG_ROUTE_NAME');
+    var iFac=headers.indexOf('nodo');
+    var iShp=headers.indexOf('SHP_FACILITY');
+    var iData=headers.indexOf('data_sorting');
+    var iSaca=headers.indexOf('saca');
+
+    var plan={};// plan[fac][ciclo] = {rotas:0, sacas:0, etas:[]}
+
+    lines.slice(1).forEach(function(line){
+      if(!line.trim())return;
+      var cols=line.split(',').map(function(c){return c.trim().replace(/"/g,'');});
+      var shp=cols[iShp]||'';
+      if(shp!=='SRJ3')return;
+      var fac=cols[iFac]||'';
+      if(!FACS.includes(fac))return;
+      var route=cols[iRoute]||'';
+      var data=cols[iData]||'';
+      var saca=parseInt(cols[iSaca])||0;
+
+      // Detecta ciclo pelo prefixo
+      var ciclo='';
+      if(route.substring(0,3)==='CHP') ciclo='CHP';
+      else if(route.substring(0,3)==='AM1'||route.substring(0,2)==='AM') ciclo='AM1';
+      else if(route.substring(0,3)==='PM1'||route.substring(0,2)==='PM') ciclo='PM1';
+      else if(route.substring(0,2)==='SD') ciclo='SD';
+      if(!ciclo)return;
+
+      // Valida data por ciclo
+      var dataOk=false;
+      if(ciclo==='CHP'&&data===ontem) dataOk=true;
+      if((ciclo==='AM1'||ciclo==='PM1'||ciclo==='SD')&&data===hoje) dataOk=true;
+      if(!dataOk)return;
+
+      if(!plan[fac])plan[fac]={};
+      if(!plan[fac][ciclo])plan[fac][ciclo]={rotas:0,sacas:0};
+      plan[fac][ciclo].rotas++;
+      plan[fac][ciclo].sacas+=saca;
+    });
+
+    S.plan=plan;
+  }catch(e){console.error('[MN Plan]',e);S.plan={};}
+  S.planLoading=false;
+}
+
 function buildPanel(){
   injectCSS();
   var bd=document.createElement('div');
@@ -230,7 +301,8 @@ function buildPanel(){
   tabs.innerHTML='<div class="mn-tab on" data-t="nodos">🛰️ Nodos</div>'
     +'<div class="mn-tab" data-t="escala">📋 Escala</div>'
     +'<div class="mn-tab" data-t="fechamento">📦 Fechamento</div>'
-    +'<div class="mn-tab" data-t="turno">🔄 Passagem de Turno</div>';
+    +'<div class="mn-tab" data-t="turno">🔄 Passagem de Turno</div>'
+    +'<div class="mn-tab" data-t="plan">📊 Planejamento</div>';
   panel.appendChild(tabs);
 
   var body=document.createElement('div');
@@ -298,6 +370,7 @@ function buildPanel(){
   });
 
   updateDate();
+  fetchPlan();
   fetchAll();
   startTimers();
 }
@@ -330,6 +403,140 @@ function renderBody(){
   else if(S.tab==='escala')renderEscala(body);
   else if(S.tab==='fechamento')renderFechamento(body);
   else if(S.tab==='turno')renderTurno(body);
+  else if(S.tab==='plan')renderPlan(body);
+}
+
+function renderPlan(body){
+  if(S.planLoading){
+    body.innerHTML='<div style="display:flex;align-items:center;gap:10px;color:#00d4ff;padding:40px;justify-content:center"><div class="mn-sp"></div><span>Carregando planilha...</span></div>';
+    return;
+  }
+  if(!S.plan){
+    fetchPlan().then(function(){renderPlan(body);});
+    body.innerHTML='<div style="display:flex;align-items:center;gap:10px;color:#00d4ff;padding:40px;justify-content:center"><div class="mn-sp"></div><span>Carregando planilha...</span></div>';
+    return;
+  }
+
+  var ciclos=['CHP','AM1','PM1','SD'];
+  var cicloLabel={'CHP':'CHP','AM1':'AM','PM1':'PM','SD':'SD'};
+  var hoje=gd();
+
+  // Totais gerais por ciclo
+  var totais={CHP:{rotas:0,sacas:0},AM1:{rotas:0,sacas:0},PM1:{rotas:0,sacas:0},SD:{rotas:0,sacas:0}};
+  FACS.forEach(function(fac){
+    var fp=S.plan[fac]||{};
+    ciclos.forEach(function(c){
+      if(fp[c]){totais[c].rotas+=fp[c].rotas;totais[c].sacas+=fp[c].sacas;}
+    });
+  });
+
+  var html='<div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;align-items:center">'
+    +'<button class="mn-btn g" id="mn-cp-plan-geral">Copiar Resumo Geral</button>'
+    +'<button class="mn-btn" id="mn-ref-plan">Atualizar Planilha</button>'
+    +'<span style="font-size:11px;color:#506070">Dados de '+br(hoje)+'</span>'
+    +'</div>';
+
+  // KPIs gerais
+  html+='<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px">';
+  ciclos.forEach(function(c){
+    if(!totais[c].rotas)return;
+    html+='<div class="mn-kpi" style="border-color:rgba(0,212,255,.3)">'
+      +'<div class="v" style="color:#00d4ff">'+totais[c].rotas+'</div>'
+      +'<div class="l">'+cicloLabel[c]+' rotas</div>'
+      +'</div>'
+      +'<div class="mn-kpi">'
+      +'<div class="v" style="font-size:18px">'+totais[c].sacas+'</div>'
+      +'<div class="l">'+cicloLabel[c]+' sacas</div>'
+      +'</div>';
+  });
+  html+='</div>';
+
+  // Por facility
+  html+='<div style="display:flex;flex-direction:column;gap:10px">';
+  FACS.forEach(function(fac){
+    var fp=S.plan[fac]||{};
+    var temRota=ciclos.some(function(c){return fp[c]&&fp[c].rotas>0;});
+    var etaFac=FAC_ETA[fac]||{};
+
+    // Ciclos sem rota
+    var semRota=ciclos.filter(function(c){
+      return etaFac[c]&&(!fp[c]||fp[c].rotas===0);
+    });
+
+    html+='<div style="background:rgba(13,21,37,.8);border:1px solid rgba(0,212,255,.15);border-radius:12px;overflow:hidden">';
+
+    // Header facility
+    html+='<div style="background:rgba(0,212,255,.08);padding:10px 16px;display:flex;align-items:center;justify-content:space-between">'
+      +'<div style="display:flex;align-items:center;gap:10px">'
+      +'<span style="font-size:13px;font-weight:700;color:#00d4ff">'+fac+'</span>'
+      +(semRota.length?'<span style="background:rgba(255,140,0,.2);color:#ff8c00;font-size:10px;padding:2px 8px;border-radius:10px;font-weight:600">SEM '+semRota.map(function(c){return cicloLabel[c];}).join(', ')+'</span>':'')
+      +'</div>'
+      +'<button class="mn-btn g sm" data-cp-fac="'+fac+'">Copiar msg</button>'
+      +'</div>';
+
+    html+='<div style="padding:10px 16px;display:flex;gap:8px;flex-wrap:wrap">';
+    ciclos.forEach(function(c){
+      if(!etaFac[c])return;
+      var d=fp[c]||{rotas:0,sacas:0};
+      var cor=d.rotas>0?'#00d4ff':'#506070';
+      var bg=d.rotas>0?'rgba(0,212,255,.08)':'rgba(255,255,255,.03)';
+      var border=d.rotas>0?'rgba(0,212,255,.25)':'rgba(255,255,255,.06)';
+      html+='<div style="background:'+bg+';border:1px solid '+border+';border-radius:10px;padding:10px 14px;min-width:110px;text-align:center">'
+        +'<div style="font-size:11px;color:#506070;margin-bottom:2px">'+cicloLabel[c]+'</div>'
+        +'<div style="font-size:22px;font-weight:700;color:'+cor+'">'+d.rotas+'</div>'
+        +'<div style="font-size:10px;color:#506070">rotas</div>'
+        +'<div style="font-size:12px;color:#ffcc00;margin-top:4px">'+d.sacas+' sacas</div>'
+        +'<div style="font-size:10px;color:#506070;margin-top:2px">ETA '+etaFac[c]+'</div>'
+        +'</div>';
+    });
+    html+='</div>';
+    html+='</div>';
+  });
+  html+='</div>';
+
+  body.innerHTML=html;
+
+  // ATUALIZAR PLANILHA
+  body.querySelector('#mn-ref-plan').onclick=function(){
+    S.plan=null;
+    fetchPlan().then(function(){renderPlan(body);});
+    body.innerHTML='<div style="display:flex;align-items:center;gap:10px;color:#00d4ff;padding:40px;justify-content:center"><div class="mn-sp"></div><span>Atualizando...</span></div>';
+  };
+
+  // COPIAR RESUMO GERAL
+  body.querySelector('#mn-cp-plan-geral').onclick=function(){
+    var lines=['Bom dia!','','Para hoje temos:'];
+    ciclos.forEach(function(c){
+      if(!totais[c].rotas)return;
+      lines.push(totais[c].rotas+' rotas no ciclo '+cicloLabel[c]);
+    });
+    cp(lines.join('\n'),'Resumo geral');
+  };
+
+  // COPIAR POR FACILITY
+  body.querySelectorAll('[data-cp-fac]').forEach(function(btn){
+    btn.onclick=function(){
+      var fac=this.dataset.cpFac;
+      var fp=S.plan[fac]||{};
+      var etaFac=FAC_ETA[fac]||{};
+      var lines=['Bom dia!','','Para hoje temos:'];
+      var temAlgo=false;
+      ciclos.forEach(function(c){
+        if(!etaFac[c])return;
+        var d=fp[c]||{rotas:0,sacas:0};
+        if(d.rotas===0)return;
+        lines.push(d.rotas+' rotas no ciclo '+cicloLabel[c]+' - ETA '+etaFac[c]);
+        temAlgo=true;
+      });
+      if(!temAlgo){toast('Sem rotas planejadas para '+fac);return;}
+      cp(lines.join('\n'),'Planejamento '+fac);
+    };
+  });
+
+  // Carrega planejamento ao abrir a aba
+  if(!S.plan){
+    fetchPlan().then(function(){renderPlan(body);});
+  }
 }
 
 function renderNodos(body){
@@ -596,7 +803,7 @@ function renderEscala(body){
         etaGroups[k].push(r);
       });
       var etaKeys=Object.keys(etaGroups).sort(function(a,b){return (e2m(a)||9999)-(e2m(b)||9999);});
-      var lines=['Segue escala do *'+label+'*:',''];
+      var lines=['Segue a escala do *'+label+'*:',''];
       etaKeys.forEach(function(eta){
         var facGroups={};
         etaGroups[eta].forEach(function(r){
