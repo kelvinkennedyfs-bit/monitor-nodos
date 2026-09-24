@@ -255,7 +255,7 @@ async function fetchPlan(){
 
       // Valida data por ciclo
       var dataOk=false;
-      if(ciclo==='CHP'&&(data===ontemStr||data===hojeStr)) dataOk=true;
+      if(ciclo==='CHP'&&data===ontemStr) dataOk=true;
       if((ciclo==='AM1'||ciclo==='PM1'||ciclo==='SD')&&data===hojeStr) dataOk=true;
       if(!dataOk)return;
 
