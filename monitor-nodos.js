@@ -272,8 +272,8 @@ async function fetchPlan(){
           S.planAmanha[fac].CHP.sacas+=saca;
         }
       } else {
-        // AM1, PM1, SD: data=ontem OU data=hoje OU vazia = rotas de HOJE
-        if(data===ontemStr||data===hojeStr||dataVazia){
+        // AM1, PM1, SD: data=hoje OU vazia = rotas de HOJE
+        if(data===hojeStr||dataVazia){
           if(!plan[fac])plan[fac]={};
           if(!plan[fac][ciclo])plan[fac][ciclo]={rotas:0,sacas:0};
           plan[fac][ciclo].rotas++;
