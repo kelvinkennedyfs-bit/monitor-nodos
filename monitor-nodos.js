@@ -85,75 +85,82 @@ function etaToCiclo(eta){
   return 'SD';
 }
 
-async function fetchAll(){
-  S.loading=true;renderBody();
-  var base='https://envios.adminml.com/logistics/travel-management/api/schedules';
+async function fetchPlan(){
+  S.planLoading=true;
   try{
-    var all=[],page=1,hasNext=true;
-    while(hasNext&&page<=20){
-      var resp=await fetch(base,{
-        method:'POST',credentials:'include',
-        headers:{'Accept':'application/json','Content-Type':'application/json'},
-        body:JSON.stringify({
-          page:page, per_page:100,
-          date_lt_eq:S.date, date_gt_eq:S.date,
-          eta_from:'', eta_to:'',
-          carriers:[], created_by_apps:[], created_by_users:[],
-          labels:[], origin_facilities:FACS,
-          search:'', status:[],
-          step_type:'last_mile',
-          travel_ids:[], vehicles:[]
-        })
-      });
-      var data=await resp.json();
-      var routes=(data&&data.data)||[];
-      all=all.concat(routes);
-      hasNext=routes.length===100;
-      page++;
-    }
+    var hoje=gd();
+    var ontem=ad(hoje,-1);
+    function toBR(d){var p=d.split('-');return p[2]+'/'+p[1]+'/'+p[0];}
+    var hojeStr=toBR(hoje);
+    var ontemStr=toBR(ontem);
 
-    S.rows=all.map(function(r){
-      var assigned=r.assigned||{};
-      var drivers=assigned.drivers||[];
-      var vehicles=assigned.vehicles||[];
-      var step=(r.steps&&r.steps[0])||{};
-      var drv=drivers[0]||{};
-      var veh=vehicles[0]||{};
-      var driverName=(drv.first_name||drv.last_name)
-        ?(drv.first_name+' '+drv.last_name).trim():'';
-      var carrier=String(r.carrier_description||'');
-      var fac=r.origin_facility_id||'';
-      var tid=String(r.travel_id||'');
-      var st=mapStatus(r.status,r.substatus||'');
-      var vtype=String(r.service_description||'');
-      var eta=(step.eta&&step.eta!=='00:00')?step.eta:'';
-      var cycle=etaToCiclo(eta);
-      // Kangu automático
-      var autoKangu=carrier==='Kangu Logistics'&&vtype.toLowerCase().indexOf('utilitario')>=0;
-      if(autoKangu&&!S.kangu[tid]){S.kangu[tid]=1;sk();}
-      return {
-        tid:tid,
-        fac:fac,
-        carrier:carrier,
-        driver:driverName,
-        plate:veh.license_plate||'',
-        cycle:cycle,
-        eta:eta,
-        status:st,
-        total:0,
-        delivered:0,
-        failed:0,
-        pending:0,
-        vtype:vtype,
-        date:r.date||S.date,
-        hasDriver:!!driverName
-      };
-    }).filter(function(r){
-      return FACS.includes(r.fac);
+    var resp=await fetch(SHEET_URL+'&cachebust='+Date.now());
+    var csv=await resp.text();
+    var lines=csv.split('\n');
+    var headers=lines[0].split(',').map(function(h){return h.trim().replace(/"/g,'').replace(/\r/g,'');});
+    var iRoute=headers.indexOf('RTG_ROUTE_NAME');
+    var iFac=headers.indexOf('nodo');
+    var iShp=headers.indexOf('SHP_FACILITY_ID');
+    var iData=headers.indexOf('data_sorting');
+    var iSaca=headers.indexOf('saca');
+
+    var plan={};
+    S.planAmanha={};
+
+    lines.slice(1).forEach(function(line){
+      if(!line.trim())return;
+      var cols=line.split(',').map(function(c){return c.trim().replace(/"/g,'').replace(/\r/g,'');});
+      var shp=cols[iShp]||'';
+      if(shp!=='SRJ3')return;
+      var fac=cols[iFac]||'';
+      if(!FACS.includes(fac))return;
+      var route=cols[iRoute]||'';
+      var data=cols[iData]||'';
+      var saca=parseInt(cols[iSaca])||0;
+
+      var r3=route.substring(0,3).toUpperCase();
+      var r2=route.substring(0,2).toUpperCase();
+
+      // Detecta ciclo
+      var ciclo='';
+      if(r3==='CHP') ciclo='CHP';
+      else if(r3==='AM1'||r3==='AM2'||r3==='AM3'||r2==='AM') ciclo='AM1';
+      else if(r3==='PM1'||r3==='PM2'||r3==='PM3'||r2==='PM') ciclo='PM1';
+      else if(r2==='SD') ciclo='SD';
+      if(!ciclo)return;
+
+      var dataVazia=(!data||data==='');
+
+      if(ciclo==='CHP'){
+        // CHP do dia: data=ontem OU data=hoje (previsão amanhã)
+        if(data===ontemStr||dataVazia){
+          // CHP de HOJE
+          if(!plan[fac])plan[fac]={};
+          if(!plan[fac][ciclo])plan[fac][ciclo]={rotas:0,sacas:0};
+          plan[fac][ciclo].rotas++;
+          plan[fac][ciclo].sacas+=saca;
+        } else if(data===hojeStr){
+          // CHP de AMANHÃ (pedido feito hoje à tarde)
+          if(!S.planAmanha[fac])S.planAmanha[fac]={CHP:{rotas:0,sacas:0}};
+          S.planAmanha[fac].CHP.rotas++;
+          S.planAmanha[fac].CHP.sacas+=saca;
+        }
+      } else {
+        // AM1, PM1, SD: data=ontem OU data=hoje OU vazia = rotas de HOJE
+        if(data===ontemStr||data===hojeStr||dataVazia){
+          if(!plan[fac])plan[fac]={};
+          if(!plan[fac][ciclo])plan[fac][ciclo]={rotas:0,sacas:0};
+          plan[fac][ciclo].rotas++;
+          plan[fac][ciclo].sacas+=saca;
+        }
+      }
     });
 
-  }catch(e){console.error('[MN]',e);}
-  S.loading=false;renderBody();
+    S.plan=plan;
+    console.log('[MN Plan] OK:', Object.keys(plan).length,'facilities');
+    console.log('[MN Plan] Amanhã CHP:', Object.keys(S.planAmanha).length,'facilities');
+  }catch(e){console.error('[MN Plan]',e);S.plan={};}
+  S.planLoading=false;
 }
 
 function injectCSS(){
