@@ -4,7 +4,7 @@ var FACS=['BRNRJ381','BRNRJ82','BRNRJ719','BRNRJ153','BRNRJ542','BRNRJ564','BRNR
 var ex=document.getElementById(PID);
 if(ex){var bd2=document.getElementById(BID);var v=ex.style.display!=='none';ex.style.display=v?'none':'flex';if(bd2)bd2.style.display=v?'none':'block';return;}
 
-var SHEET_URL='https://docs.google.com/spreadsheets/d/e/2PACX-1vS8NG_HVt-pRd1fAEyD9DGAicRCWMZ4DBpuJWS76o_UfwCKfqhefwq74znZqj0JpEVIMcyTzGj74bbn/pub?gid=1898881109&single=true&output=csv';
+var SHEET_URL='https://docs.google.com/spreadsheets/d/e/2PACX-1vR1i8EMrqkYbi3AiXoGICf6tekDgKS5-ZH5fgXJc9oktSRZd3Ihy2gxXJowZm3EQn5WXPEra4AYed5i/pub?output=csv';
 
 var FAC_ETA={
   'BRNSP1335':{'CHP':'09:30','AM1':'13:30'},
