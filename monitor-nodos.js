@@ -318,13 +318,13 @@ async function fetchPlan(){
 
       if(ciclo==='CHP'){
         // CHP do dia: data=ontem OU data=hoje (previsão amanhã)
-        if(data===ontemStr||dataVazia){
+        if(data===ontemStr){
           // CHP de HOJE
           if(!plan[fac])plan[fac]={};
           if(!plan[fac][ciclo])plan[fac][ciclo]={rotas:0,sacas:0};
           plan[fac][ciclo].rotas++;
           plan[fac][ciclo].sacas+=saca;
-        } else if(data===hojeStr){
+        } else if(data===hojeStr||dataVazia){
           // CHP de AMANHÃ (pedido feito hoje à tarde)
           if(!S.planAmanha[fac])S.planAmanha[fac]={CHP:{rotas:0,sacas:0}};
           S.planAmanha[fac].CHP.rotas++;
